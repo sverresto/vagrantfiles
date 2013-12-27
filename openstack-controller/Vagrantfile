@@ -1,0 +1,44 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+# setup the chef server
+# http://www.rackspace.com/knowledge_center/article/installing-openstack-with-rackspace-private-cloud-tools
+$script = <<SCRIPT
+route del -net default dev eth0
+
+echo "setting server name"
+echo "openstack-controller" > /etc/hostname
+hostname `cat /etc/hostname`
+
+myip=$(facter | grep ipaddress_eth2 | awk '{ print $3 }')
+echo "$myip openstack-controller.invalid.net openstack-controller" >> /etc/hosts
+
+mkdir -m 700 /root/.ssh/
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC+JBS2odZJwabLF6zimiGWrZIImaiUvWQlz7RrPt313rTKVPzUHcT1VKY5pcYYalT6lwB/6M01h2cyFEaDgkUJ7ZslQz7oo2ZY4VFHzK/cdEMVnZnjE6hu8Ztx4w9G6Lv43y96Cr/ONE4oxUtyHHXp+G1Gi8eaK+Ouv5oFZ9v0rLgRHBpJKaNDZPfwZfIr+FsO2/a5vqd/ClR6Jd64gUg7Z+l9gmRdCcOqBdHNd+dqk+bs8Gx8qHEk2yRUhMb/F4JYL4mwgH50FbjmkaL0atxANrDGXfpbyfMUmBTiB4KtuhW6CwyEDhf58fo2xUIG07yVa9l2MGjVQhU/NELMg9E9J19xDlfKn9HOCQyKKOapmJhBfglYcJ6ai8/iySMNHSJwqC03vKxMjscAg5XKJg1f6c+6axB8XwrfnC78A18Nq1+qUcZ0EBCuep4NFjdW+i3BsbxGXSZDROBbFtVA/VD5dtgRvNL3iWx9lpdWCJN8oD3yja4e4clkHfvIjM0j9tMjnBT/RZMJko5g1e94c2v3+7rXvHBz6a70bRGSGeZRHtixP1JlJFD4hZHDEPrVJ83qTbu8E6MdVsIBrCu6cybiQph2pQVA3NNCykDaqH/H7/TnK/+oQSY6AXeYcY4+TfLhPJk4KmU4WcyVL67SdZ50yMCptUgBoL2MAShwg8VuwQ== root@chef-server-2013-12-17" >> /root/.ssh/authorized_keys
+
+sed -i "/^exit 0$/i route del -net default dev eth0" /etc/rc.local
+
+SCRIPT
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "ubuntu-12.04"
+  config.vm.box_url = "http://cloud-images.ubuntu.com/vagrant/precise/current/precise-server-cloudimg-amd64-vagrant-disk1.box"
+
+  #
+  # change this to the openstack controllers ip
+  # 
+  config.vm.network :private_network, ip: "192.168.33.20"
+
+  config.vm.network :public_network, :bridge => "br0", :use_dhcp_assigned_default_route => true
+  config.vm.provider :virtualbox do |vb|
+     # Don't boot with headless mode
+     # vb.gui = true
+  
+     # Use VBoxManage to customize the VM. For example to change memory:
+     vb.customize ["modifyvm", :id, "--memory", "2048"]
+  end
+  config.vm.provision "shell", inline: $script
+end
