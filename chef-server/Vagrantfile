@@ -1,0 +1,220 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+# setup the chef server
+# http://www.rackspace.com/knowledge_center/article/installing-openstack-with-rackspace-private-cloud-tools
+$script = <<SCRIPT
+route del -net default dev eth0
+
+echo "setting server name"
+echo "chef-server" > /etc/hostname 
+hostname `cat /etc/hostname`
+
+myip=$(facter | grep ipaddress_eth2 | awk '{ print $3 }')
+echo "$myip chef-server.invalid.net chef-server" >> /etc/hosts
+
+echo "installing chef server"
+curl -s -L https://raw.github.com/rcbops/support-tools/master/chef-install/install-chef-server.sh  > /tmp/install-chef-server.sh
+bash /tmp/install-chef-server.sh 
+
+echo "installing cookbooks"
+curl -s -L https://raw.github.com/rcbops/support-tools/master/chef-install/install-cookbooks.sh > /root/install-cookbooks.sh
+COOKBOOK_BRANCH=v4.2.0
+bash /root/install-cookbooks.sh
+
+echo "download the client installer"
+curl -skS https://raw.github.com/rcbops/support-tools/master/chef-install/install-chef-client.sh > /root/install-chef-client.sh
+chmod +x /root/install-chef-client.sh
+
+echo "installing latest kernel"
+apt-get install linux-image-3.11.0-13-generic linux-headers-3.11.0-13-generic
+
+#echo "creating password less key file for root"
+#ssh-keygen -t rsa -b 4096 -C "$(whoami)@$(hostname)-$(date -I)" -f /root/.ssh/id_rsa -N ""
+
+mkdir -m 700 /root/.ssh
+
+cat>/root/.ssh/id_rsa<<EOF
+-----BEGIN RSA PRIVATE KEY-----
+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
+-----END RSA PRIVATE KEY-----
+EOF
+chmod 600 /root/.ssh/id_rsa
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC+JBS2odZJwabLF6zimiGWrZIImaiUvWQlz7RrPt313rTKVPzUHcT1VKY5pcYYalT6lwB/6M01h2cyFEaDgkUJ7ZslQz7oo2ZY4VFHzK/cdEMVnZnjE6hu8Ztx4w9G6Lv43y96Cr/ONE4oxUtyHHXp+G1Gi8eaK+Ouv5oFZ9v0rLgRHBpJKaNDZPfwZfIr+FsO2/a5vqd/ClR6Jd64gUg7Z+l9gmRdCcOqBdHNd+dqk+bs8Gx8qHEk2yRUhMb/F4JYL4mwgH50FbjmkaL0atxANrDGXfpbyfMUmBTiB4KtuhW6CwyEDhf58fo2xUIG07yVa9l2MGjVQhU/NELMg9E9J19xDlfKn9HOCQyKKOapmJhBfglYcJ6ai8/iySMNHSJwqC03vKxMjscAg5XKJg1f6c+6axB8XwrfnC78A18Nq1+qUcZ0EBCuep4NFjdW+i3BsbxGXSZDROBbFtVA/VD5dtgRvNL3iWx9lpdWCJN8oD3yja4e4clkHfvIjM0j9tMjnBT/RZMJko5g1e94c2v3+7rXvHBz6a70bRGSGeZRHtixP1JlJFD4hZHDEPrVJ83qTbu8E6MdVsIBrCu6cybiQph2pQVA3NNCykDaqH/H7/TnK/+oQSY6AXeYcY4+TfLhPJk4KmU4WcyVL67SdZ50yMCptUgBoL2MAShwg8VuwQ== root@chef-server-2013-12-17" > /root/.ssh/id_rsa.pub
+chmod 644 /root/.ssh/id_rsa.pub
+
+
+sed -i "/^exit 0$/i route del -net default dev eth0" /etc/rc.local
+sed -i "/^exit 0$/i chef-server-ctl start" /etc/rc.local
+
+date > /etc/vagrant_provisioned_at
+echo "finished!"
+SCRIPT
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  # All Vagrant configuration is done here. The most common configuration
+  # options are documented and commented below. For a complete reference,
+  # please see the online documentation at vagrantup.com.
+
+  # Every Vagrant virtual environment requires a box to build off of.
+  config.vm.box = "ubuntu-12.04"
+
+  # The url from where the 'config.vm.box' box will be fetched if it
+  # doesn't already exist on the user's system.
+  config.vm.box_url = "http://cloud-images.ubuntu.com/vagrant/precise/current/precise-server-cloudimg-amd64-vagrant-disk1.box"
+
+  # Create a forwarded port mapping which allows access to a specific port
+  # within the machine from a port on the host machine. In the example below,
+  # accessing "localhost:8080" will access port 80 on the guest machine.
+  # config.vm.network :forwarded_port, guest: 80, host: 8080
+
+  # Create a private network, which allows host-only access to the machine
+  # using a specific IP.
+  config.vm.network :private_network, ip: "192.168.33.10"
+
+  # Create a public network, which generally matched to bridged network.
+  # Bridged networks make the machine appear as another physical device on
+  # your network.
+  config.vm.network :public_network, :bridge => "br0", :use_dhcp_assigned_default_route => true
+
+  # If true, then any SSH connections made will enable agent forwarding.
+  # Default value: false
+  # config.ssh.forward_agent = true
+
+  # Share an additional folder to the guest VM. The first argument is
+  # the path on the host to the actual folder. The second argument is
+  # the path on the guest to mount the folder. And the optional third
+  # argument is a set of non-required options.
+  # config.vm.synced_folder "../data", "/vagrant_data"
+
+  # Provider-specific configuration so you can fine-tune various
+  # backing providers for Vagrant. These expose provider-specific options.
+  # Example for VirtualBox:
+  #
+  config.vm.provider :virtualbox do |vb|
+     # Don't boot with headless mode
+     # vb.gui = true
+  
+     # Use VBoxManage to customize the VM. For example to change memory:
+     # default was too little for chef
+     vb.customize ["modifyvm", :id, "--memory", "1024"]
+  end
+  
+  # View the documentation for the provider you're using for more
+  # information on available options.
+
+  # execute the shell script from the top of this file.
+  config.vm.provision "shell", inline: $script
+
+  # Enable provisioning with Puppet stand alone.  Puppet manifests
+  # are contained in a directory path relative to this Vagrantfile.
+  # You will need to create the manifests directory and a manifest in
+  # the file ubuntu-12-04.pp in the manifests_path directory.
+  #
+  # An example Puppet manifest to provision the message of the day:
+  #
+  # # group { "puppet":
+  # #   ensure => "present",
+  # # }
+  # #
+  # # File { owner => 0, group => 0, mode => 0644 }
+  # #
+  # # file { '/etc/motd':
+  # #   content => "Welcome to your Vagrant-built virtual machine!
+  # #               Managed by Puppet.\n"
+  # # }
+  #
+  # config.vm.provision :puppet do |puppet|
+  #   puppet.manifests_path = "manifests"
+  #   puppet.manifest_file  = "site.pp"
+  # end
+
+  # Enable provisioning with chef solo, specifying a cookbooks path, roles
+  # path, and data_bags path (all relative to this Vagrantfile), and adding
+  # some recipes and/or roles.
+  #
+  # config.vm.provision :chef_solo do |chef|
+  #   chef.cookbooks_path = "../my-recipes/cookbooks"
+  #   chef.roles_path = "../my-recipes/roles"
+  #   chef.data_bags_path = "../my-recipes/data_bags"
+  #   chef.add_recipe "mysql"
+  #   chef.add_role "web"
+  #
+  #   # You may also specify custom JSON attributes:
+  #   chef.json = { :mysql_password => "foo" }
+  # end
+
+  # Enable provisioning with chef server, specifying the chef server URL,
+  # and the path to the validation key (relative to this Vagrantfile).
+  #
+  # The Opscode Platform uses HTTPS. Substitute your organization for
+  # ORGNAME in the URL and validation key.
+  #
+  # If you have your own Chef Server, use the appropriate URL, which may be
+  # HTTP instead of HTTPS depending on your configuration. Also change the
+  # validation key to validation.pem.
+  #
+  # config.vm.provision :chef_client do |chef|
+  #   chef.chef_server_url = "https://api.opscode.com/organizations/ORGNAME"
+  #   chef.validation_key_path = "ORGNAME-validator.pem"
+  # end
+  #
+  # If you're using the Opscode platform, your validator client is
+  # ORGNAME-validator, replacing ORGNAME with your organization name.
+  #
+  # If you have your own Chef Server, the default validation client name is
+  # chef-validator, unless you changed the configuration.
+  #
+  #   chef.validation_client_name = "ORGNAME-validator"
+end
