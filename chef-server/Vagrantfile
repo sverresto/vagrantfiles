@@ -14,7 +14,9 @@ echo "chef-server" > /etc/hostname
 hostname `cat /etc/hostname`
 
 myip=$(facter | grep ipaddress_eth2 | awk '{ print $3 }')
-echo "$myip chef-server.invalid.net chef-server" >> /etc/hosts
+grep -v $myip /shared_dir/etc/hosts > /shared_dir/etc/hosts
+rm /etc/hosts && ln /shared_dir/etc/hosts /etc/hosts
+echo "$myip chef-server.invalid.net chef-server" >> /shared_dir/etc/hosts
 
 echo "installing chef server"
 curl -s -L https://raw.github.com/rcbops/support-tools/master/chef-install/install-chef-server.sh  > /tmp/install-chef-server.sh
